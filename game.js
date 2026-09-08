@@ -118,6 +118,94 @@ class Asteroid {
   }
 }
 
+// ── Estrella fugaz ────────────────────────────────────────────────────────────
+const STAR_RADIUS = 26;
+const STAR_SPEED  = 200;
+const STAR_TTL    = 8;
+
+class ShootingStar {
+  constructor(x, y) {
+    this.x = x;
+    this.y = y;
+    this.size   = 1;
+    this.radius = STAR_RADIUS;
+    this.ttl    = STAR_TTL;
+    this.dead   = false;
+
+    const angle = rand(0, Math.PI * 2);
+    const speed = STAR_SPEED + rand(-20, 20);
+    this.vx = Math.cos(angle) * speed;
+    this.vy = Math.sin(angle) * speed;
+    this.rotSpeed = rand(-2, 2);
+    this.rot = 0;
+
+    // Estrella de 5 puntas
+    const SPIKES = 5;
+    this.verts = [];
+    for (let i = 0; i < SPIKES * 2; i++) {
+      const a = (i / (SPIKES * 2)) * Math.PI * 2 - Math.PI / 2;
+      const r = i % 2 === 0 ? this.radius : this.radius * 0.45;
+      this.verts.push([Math.cos(a) * r, Math.sin(a) * r]);
+    }
+
+    // Estela: últimas posiciones
+    this.tail = [];
+    this.TAIL_LEN = 9;
+  }
+
+  update(dt) {
+    const oldX = this.x;
+    const oldY = this.y;
+    this.x   = wrap(this.x + this.vx * dt, W);
+    this.y   = wrap(this.y + this.vy * dt, H);
+    this.rot += this.rotSpeed * dt;
+
+    if (Math.abs(this.x - oldX) > W / 2 || Math.abs(this.y - oldY) > H / 2)
+      this.tail = [];
+
+    this.tail.unshift([this.x, this.y]);
+    if (this.tail.length > this.TAIL_LEN) this.tail.pop();
+
+    this.ttl -= dt;
+    if (this.ttl <= 0) {
+      this.dead = true;
+      explode(this.x, this.y, 4);
+    }
+  }
+
+  split() { return []; }
+
+  draw() {
+    const alpha = Math.min(1, this.ttl / (STAR_TTL * 0.3));
+    if ((this.ttl < 1.5) && Math.floor(this.ttl * 8) % 2 === 0) return;
+
+    // Estela fugaz
+    for (let i = 1; i < this.tail.length; i++) {
+      const t = i / this.tail.length;
+      ctx.strokeStyle = `rgba(255,138,0,${(alpha * (1 - t) * 0.7).toFixed(2)})`;
+      ctx.lineWidth = 1 + (1 - t) * 2;
+      ctx.beginPath();
+      ctx.moveTo(this.tail[i - 1][0], this.tail[i - 1][1]);
+      ctx.lineTo(this.tail[i][0], this.tail[i][1]);
+      ctx.stroke();
+    }
+
+    ctx.save();
+    ctx.translate(this.x, this.y);
+    ctx.rotate(this.rot);
+    ctx.strokeStyle = `rgba(255,160,60,${alpha.toFixed(2)})`;
+    ctx.lineWidth   = 1.5;
+    ctx.lineJoin    = 'round';
+    ctx.beginPath();
+    ctx.moveTo(this.verts[0][0], this.verts[0][1]);
+    for (let i = 1; i < this.verts.length; i++)
+      ctx.lineTo(this.verts[i][0], this.verts[i][1]);
+    ctx.closePath();
+    ctx.stroke();
+    ctx.restore();
+  }
+}
+
 // ── Ship ──────────────────────────────────────────────────────────────────────
 const BOOST_DURATION = 5;
 
@@ -296,7 +384,8 @@ function spawnAsteroids(count) {
       x = rand(0, W);
       y = rand(0, H);
     } while (Math.hypot(x - W / 2, y - H / 2) < SAFE_DIST);
-    asteroids.push(new Asteroid(x, y, 3));
+    const isStar = Math.random() < 0.15;
+    asteroids.push(isStar ? new ShootingStar(x, y) : new Asteroid(x, y, 3));
   }
 }
 
