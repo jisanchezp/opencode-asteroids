@@ -24,11 +24,12 @@ Luego visita `http://localhost:3000`.
 
 ## Controles
 
-| Tecla     | Acción     |
-| --------- | ---------- |
-| `←` `→`   | Rotar nave |
-| `↑`       | Propulsar  |
-| `Espacio` | Disparar   |
+| Tecla     | Acción          |
+| --------- | --------------- |
+| `←` `→`   | Rotar nave      |
+| `↑`       | Propulsar       |
+| `Espacio` | Disparar        |
+| `S`       | Cambiar apariencia de la nave (cicla skins) |
 
 ## Puntuación
 
@@ -42,6 +43,7 @@ Luego visita `http://localhost:3000`.
 ## Características
 
 - 3 vidas con invencibilidad temporal al reaparecer (parpadeo)
+- Sistema de skins: pulsa `S` para ciclar la apariencia de la nave (CLÁSICO, VÍBORA, DELTA, FALCÓN, FANTASMA); la elección se guarda en `localStorage` y los iconos de vida reflejan la skin activa
 - Asteroides se parten en fragmentos más pequeños al ser destruidos
 - Partículas de explosión al destruir asteroides
 - Power-up de velocidad x2 (chevron naranja) que aparece al destruir asteroides; al recogerlo la nave vuela al doble de velocidad por 5 segundos

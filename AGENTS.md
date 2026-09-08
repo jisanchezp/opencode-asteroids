@@ -23,6 +23,7 @@ También funciona abriendo `index.html` directamente. No uses `module`/imports n
 - Power-up de velocidad x2: aparece al destruir asteroides (12% por asteroide, máx. 1 activo, `POWERUP_TTL = 10`). Debe tener `radius` asignado (`POWERUP_RADIUS`); sin eso la recogida evalúa `NaN` y nunca se activa.
 - El boost vive en `ship.boostTimer` (segundos), se aplica duplicando `THRUST` en `Ship.update()` y se limpia en `reset()` (reaparición, `initGame`, `nextLevel`). El HUD lo muestra como `VELOCIDAD X2 (s)`.
 - Estrella fugaz (`ShootingStar`): asteriode especial de 5 puntas con estela. Más rápido (`STAR_SPEED = 200`) y con `ttl = STAR_TTL = 8` (desaparece sola con `explode()` al expirar). Spawnea en `spawnAsteroids` con probabilidad 0.15 reemplazando un `Asteroid` normal; comparte array con los asteroides. Usa `size = 1` (100 pts en `POINTS`) y `split()` retorna `[]` (no se divide). No contiene `verts` de asteroide clásico: dibuja su propio polígono de estrella.
+- Skins de la nave: sección `// ── Skins ──` con la tabla `SKINS` (objetos `{ id, name, flameColor, draw(ctx) }`). `draw(ctx)` pinta la silueta en coordenadas locales de la nave (nariz en `+X`, radio ~22, `ctx` ya transformado). La tecla `S` cicla (`cycleSkin()` desde el inicio de `update()`, funciona en cualquier estado), la selección se persiste en `localStorage` (clave `asteroids-skin`, con fallback a `'classic'`) y `drawLifeIcon()` reutiliza `getSkin().draw(ctx)` con `ctx.scale(0.55)`. El HUD muestra `PIEL: <nombre>  (S PARA CAMBIAR)` abajo a la izquierda.
 
 ## Convenciones
 
