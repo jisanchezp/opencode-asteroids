@@ -760,7 +760,7 @@ function drawHUD() {
     ctx.fillText(`VELOCIDAD X2 (${ship.boostTimer.toFixed(1)})`, W / 2, H - 16);
   }
 
-if (ship.shield > 0) {
+  if (ship.shield > 0) {
     ctx.fillStyle = '#00c8ff';
     ctx.font      = '13px monospace';
     ctx.fillText(`ESCUDO (${ship.shield.toFixed(1)})`, W / 2, H - 34);
