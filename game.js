@@ -206,6 +206,166 @@ class ShootingStar {
   }
 }
 
+// ── Skins ─────────────────────────────────────────────────────────────────────
+const SKIN_STORAGE_KEY = 'asteroids-skin';
+
+// Cada skin dibuja la silueta en coordenadas locales de la nave (nariz apuntando
+// a +X, radio ~22). Debe fijar su propio strokeStyle/lineWidth/lineJoin.
+const SKINS = [
+  {
+    id: 'classic', name: 'CLÁSICO',
+    flameColor: 'rgba(255, 130, 0, 0.85)',
+    draw(ctx) {
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth   = 1.5;
+      ctx.lineJoin    = 'round';
+      ctx.beginPath();
+      ctx.moveTo( 20,  0);   // nariz
+      ctx.lineTo(-12, -9);   // ala izquierda
+      ctx.lineTo( -7,  0);   // muesca trasera
+      ctx.lineTo(-12,  9);   // ala derecha
+      ctx.closePath();
+      ctx.stroke();
+    },
+  },
+  {
+    id: 'viper', name: 'VÍBORA',
+    flameColor: 'rgba(255, 200, 0, 0.9)',
+    draw(ctx) {
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth   = 1.6;
+      ctx.lineJoin    = 'round';
+      ctx.beginPath();
+      ctx.moveTo( 23,  0);   // nariz afilada
+      ctx.lineTo(  5, -7);   // raíz de ala izq.
+      ctx.lineTo(-13, -8);   // garra izq.
+      ctx.lineTo(-10, -2);   // muesca corta izq.
+      ctx.lineTo(-18, -4);   // garra trasera izq.
+      ctx.lineTo(-18,  4);   // garra trasera der.
+      ctx.lineTo(-10,  2);   // muesca corta der.
+      ctx.lineTo(-13,  8);   // garra der.
+      ctx.lineTo(  5,  7);   // raíz de ala der.
+      ctx.closePath();
+      ctx.stroke();
+
+      // Acento naranja en el filo del ala
+      ctx.strokeStyle = 'rgba(255, 160, 0, 0.9)';
+      ctx.lineWidth   = 1;
+      ctx.beginPath();
+      ctx.moveTo( 16,  0);
+      ctx.lineTo( -2, -5);
+      ctx.lineTo(-12, -4);
+      ctx.stroke();
+    },
+  },
+  {
+    id: 'delta', name: 'DELTA',
+    flameColor: 'rgba(80, 190, 255, 0.9)',
+    draw(ctx) {
+      ctx.strokeStyle = '#cfd8ff';
+      ctx.lineWidth   = 1.5;
+      ctx.lineJoin    = 'round';
+      ctx.beginPath();
+      ctx.moveTo( 22,  0);   // nariz
+      ctx.lineTo(-10, -10);  // ala izq. barrida
+      ctx.lineTo( -3,  0);   // centro trasero
+      ctx.lineTo(-10,  10);  // ala der.
+      ctx.closePath();
+      ctx.stroke();
+
+      // Cabina
+      ctx.fillStyle = 'rgba(80, 170, 255, 0.55)';
+      ctx.beginPath();
+      ctx.arc(6, 0, 2.6, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#9fb8ff';
+      ctx.lineWidth   = 0.8;
+      ctx.stroke();
+    },
+  },
+  {
+    id: 'falcon', name: 'FALCÓN',
+    flameColor: 'rgba(120, 230, 160, 0.9)',
+    draw(ctx) {
+      ctx.strokeStyle = '#e8e8e8';
+      ctx.lineWidth   = 1.5;
+      ctx.lineJoin    = 'round';
+      // Nariz bífida (doble proa)
+      ctx.beginPath();
+      ctx.moveTo( 21,  0);
+      ctx.lineTo( 10, -5);
+      ctx.lineTo(  6, -1);
+      ctx.lineTo(-14, -6);
+      ctx.lineTo(-10,  0);
+      ctx.lineTo(-14,  6);
+      ctx.lineTo(  6,  1);
+      ctx.lineTo( 10,  5);
+      ctx.closePath();
+      ctx.stroke();
+
+      // Quilla central
+      ctx.strokeStyle = 'rgba(120, 230, 160, 0.9)';
+      ctx.lineWidth   = 1;
+      ctx.beginPath();
+      ctx.moveTo(-2, 0);
+      ctx.lineTo(-13, 0);
+      ctx.stroke();
+    },
+  },
+  {
+    id: 'ghost', name: 'FANTASMA',
+    flameColor: 'rgba(150, 255, 240, 0.9)',
+    draw(ctx) {
+      ctx.strokeStyle = 'rgba(120, 235, 240, 0.7)';
+      ctx.lineWidth   = 1.6;
+      ctx.lineJoin    = 'round';
+      ctx.beginPath();
+      ctx.moveTo( 21,  0);
+      ctx.lineTo(-11, -8);
+      ctx.lineTo( -4, -2);
+      ctx.lineTo( -9,  0);
+      ctx.lineTo( -4,  2);
+      ctx.lineTo(-11,  8);
+      ctx.closePath();
+      ctx.stroke();
+
+      // Aura interior
+      ctx.fillStyle = 'rgba(120, 235, 240, 0.12)';
+      ctx.beginPath();
+      ctx.moveTo( 18,  0);
+      ctx.lineTo( -8, -6);
+      ctx.lineTo( -2,  0);
+      ctx.lineTo( -8,  6);
+      ctx.closePath();
+      ctx.fill();
+    },
+  },
+];
+
+function getSkin() {
+  return SKINS.find(s => s.id === skinId) || SKINS[0];
+}
+
+function loadSkin() {
+  try {
+    const saved = localStorage.getItem(SKIN_STORAGE_KEY);
+    if (saved && SKINS.some(s => s.id === saved)) return saved;
+  } catch (e) { /* localStorage no disponible */ }
+  return 'classic';
+}
+
+function saveSkin() {
+  try {
+    localStorage.setItem(SKIN_STORAGE_KEY, skinId);
+  } catch (e) { /* localStorage no disponible */ }
+}
+
+function cycleSkin() {
+  const idx = SKINS.findIndex(s => s.id === skinId);
+  skinId = SKINS[(idx + 1) % SKINS.length].id;
+  saveSkin();
+}
+
 // ── Ship ──────────────────────────────────────────────────────────────────────
 const BOOST_DURATION = 5;
 
@@ -270,18 +430,9 @@ class Ship {
     ctx.save();
     ctx.translate(this.x, this.y);
     ctx.rotate(this.angle);
-    ctx.strokeStyle = '#fff';
-    ctx.lineWidth   = 1.5;
-    ctx.lineJoin    = 'round';
+    ctx.lineJoin = 'round';
 
-    // Silueta clásica: triángulo con muesca trasera
-    ctx.beginPath();
-    ctx.moveTo( 20,  0);   // nariz
-    ctx.lineTo(-12, -9);   // ala izquierda
-    ctx.lineTo( -7,  0);   // muesca trasera
-    ctx.lineTo(-12,  9);   // ala derecha
-    ctx.closePath();
-    ctx.stroke();
+    getSkin().draw(ctx);
 
     // Llama del propulsor
     if (this.thrusting && Math.random() > 0.35) {
@@ -289,7 +440,7 @@ class Ship {
       ctx.moveTo(-8, -4);
       ctx.lineTo(-8 - rand(6, 14), 0);
       ctx.lineTo(-8,  4);
-      ctx.strokeStyle = 'rgba(255, 130, 0, 0.85)';
+      ctx.strokeStyle = getSkin().flameColor;
       ctx.stroke();
     }
 
@@ -373,6 +524,7 @@ class PowerUp {
 // ── Estado del juego ──────────────────────────────────────────────────────────
 let ship, bullets, asteroids, particles, powerups;
 let score, lives, level;
+let skinId = loadSkin();
 let state;      // 'playing' | 'dead' | 'gameover'
 let deadTimer;
 
@@ -429,6 +581,9 @@ function killShip() {
 
 // ── Update ────────────────────────────────────────────────────────────────────
 function update(dt) {
+  // Cambiar apariencia de la nave (funciona en cualquier estado)
+  if (pressed('KeyS')) cycleSkin();
+
   if (state === 'gameover') {
     if (pressed('Space')) initGame();
     particles.forEach(p => p.update(dt));
@@ -508,16 +663,8 @@ function drawLifeIcon(x, y) {
   ctx.save();
   ctx.translate(x, y);
   ctx.rotate(-Math.PI / 2);
-  ctx.strokeStyle = '#fff';
-  ctx.lineWidth   = 1.2;
-  ctx.lineJoin    = 'round';
-  ctx.beginPath();
-  ctx.moveTo( 9,  0);
-  ctx.lineTo(-6, -5);
-  ctx.lineTo(-3,  0);
-  ctx.lineTo(-6,  5);
-  ctx.closePath();
-  ctx.stroke();
+  ctx.scale(0.55, 0.55);
+  getSkin().draw(ctx);
   ctx.restore();
 }
 
@@ -539,6 +686,11 @@ function drawHUD() {
     ctx.font      = '13px monospace';
     ctx.fillText(`VELOCIDAD X2 (${ship.boostTimer.toFixed(1)})`, W / 2, H - 16);
   }
+
+  ctx.textAlign = 'left';
+  ctx.fillStyle = 'rgba(255,255,255,0.55)';
+  ctx.font      = '12px monospace';
+  ctx.fillText(`PIEL: ${getSkin().name}  (S PARA CAMBIAR)`, 14, H - 16);
 
 }
 
