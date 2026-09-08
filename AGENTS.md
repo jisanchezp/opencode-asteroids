@@ -20,8 +20,9 @@ También funciona abriendo `index.html` directamente. No uses `module`/imports n
 - Maquina de estados global `state`: `'playing' | 'dead' | 'gameover'`, manejada dentro de `update()`.
 - Clases: `Ship`, `Bullet`, `Asteroid`, `ShootingStar`, `Particle`, `PowerUp`. Todas usan el flag `dead` + filtrado con `.filter()` en el update, o lo eliminado se acumula en arrays.
 - `W=800` y `H=600` están hardcodeados en `game.js` **y** en el atributo del `<canvas>` de `index.html`. Si cambias uno, sincroniza el otro.
-- Power-up de velocidad x2: aparece al destruir asteroides (12% por asteroide, máx. 1 activo, `POWERUP_TTL = 10`). Debe tener `radius` asignado (`POWERUP_RADIUS`); sin eso la recogida evalúa `NaN` y nunca se activa.
+- Power-ups con `kind`: `'boost'` (velocidad x2, 2 chevrones naranja) y `'triple'` (disparo 3 balas, 3 chevrones cian). Aparecen al destruir asteroides (12% por asteroide, tipo al azar 50/50, máx. 1 de cada `kind` en pantalla, `POWERUP_TTL = 10`). Deben tener `radius` asignado (`POWERUP_RADIUS`); sin eso la recogida evalúa `NaN` y nunca se activa.
 - El boost vive en `ship.boostTimer` (segundos), se aplica duplicando `THRUST` en `Ship.update()` y se limpia en `reset()` (reaparición, `initGame`, `nextLevel`). El HUD lo muestra como `VELOCIDAD X2 (s)`.
+- El triple disparo vive en `ship.tripleTimer` (segundos, `TRIPLE_DURATION = 5`); activo, `Ship.tryShoot()` devuelve 3 balas en abanico (`TRIPLE_SPREAD = 0.17` rad). Se limpia en `reset()` igual que el boost. El HUD lo muestra como `TRIPLE SHOT (s)`.
 - Estrella fugaz (`ShootingStar`): asteriode especial de 5 puntas con estela. Más rápido (`STAR_SPEED = 200`) y con `ttl = STAR_TTL = 8` (desaparece sola con `explode()` al expirar). Spawnea en `spawnAsteroids` con probabilidad 0.15 reemplazando un `Asteroid` normal; comparte array con los asteroides. Usa `size = 1` (100 pts en `POINTS`) y `split()` retorna `[]` (no se divide). No contiene `verts` de asteroide clásico: dibuja su propio polígono de estrella.
 
 ## Convenciones
