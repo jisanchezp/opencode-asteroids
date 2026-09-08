@@ -367,7 +367,9 @@ function cycleSkin() {
 }
 
 // ── Ship ──────────────────────────────────────────────────────────────────────
-const BOOST_DURATION = 5;
+const BOOST_DURATION  = 5;
+const TRIPLE_DURATION = 5;
+const TRIPLE_SPREAD   = 0.17;   // rad, apertura de las balas laterales
 
 class Ship {
   constructor() { this.reset(); }
@@ -383,6 +385,7 @@ class Ship {
     this.invincible    = 3;
     this.shootCooldown = 0;
     this.boostTimer    = 0;
+    this.tripleTimer   = 0;
     this.shield        = 0;
     this.dead          = false;
   }
@@ -396,8 +399,9 @@ class Ship {
     const THRUST = 260;  // px/s²
     const DRAG   = 0.987;
 
-    if (this.boostTimer > 0) this.boostTimer -= dt;
-    if (this.shield > 0)     this.shield     -= dt;
+if (this.boostTimer  > 0) this.boostTimer  -= dt;
+    if (this.tripleTimer > 0) this.tripleTimer -= dt;
+    if (this.shield      > 0) this.shield      -= dt;
 
     if (keys['ArrowLeft'])  this.angle -= ROT * dt;
     if (keys['ArrowRight']) this.angle += ROT * dt;
@@ -421,7 +425,12 @@ class Ship {
     const NOSE = 21;
     const ox = this.x + Math.cos(this.angle) * NOSE;
     const oy = this.y + Math.sin(this.angle) * NOSE;
-    return [new Bullet(ox, oy, this.angle)];
+    const shots = [new Bullet(ox, oy, this.angle)];
+    if (this.tripleTimer > 0) {
+      shots.push(new Bullet(ox, oy, this.angle - TRIPLE_SPREAD));
+      shots.push(new Bullet(ox, oy, this.angle + TRIPLE_SPREAD));
+    }
+    return shots;
   }
 
   draw() {
@@ -505,13 +514,13 @@ const SHIELD_HIT_COST = 1.5;
 
 class PowerUp {
   constructor(x, y, kind = 'boost') {
-    this.x     = x;
-    this.y     = y;
-    this.kind   = kind;
-    this.rot   = 0;
-    this.ttl   = POWERUP_TTL;
+    this.x      = x;
+    this.y      = y;
+    this.kind   = kind;   // 'boost' | 'triple' | 'shield'
+    this.rot    = 0;
+    this.ttl    = POWERUP_TTL;
     this.radius = POWERUP_RADIUS;
-    this.dead  = false;
+    this.dead   = false;
   }
 
   update(dt) {
@@ -525,7 +534,9 @@ class PowerUp {
     ctx.save();
     ctx.translate(this.x, this.y);
     ctx.rotate(this.rot);
-    ctx.strokeStyle = `rgba(${this.kind === 'shield' ? '0, 200, 255' : '255, 138, 0'}, ${alpha.toFixed(2)})`;
+ctx.strokeStyle = this.kind === 'boost'
+      ? `rgba(255, 138, 0, ${alpha.toFixed(2)})`
+      : `rgba(0, 200, 255, ${alpha.toFixed(2)})`;
     ctx.lineWidth   = 3;
     ctx.lineCap     = 'round';
     ctx.lineJoin    = 'round';
@@ -540,12 +551,13 @@ class PowerUp {
       ctx.moveTo(-5,   4);
       ctx.arc(0, 0, 3, 0, Math.PI * 2);
     } else {
-      ctx.moveTo(-8, -10);
-      ctx.lineTo( 2,  0);
-      ctx.lineTo(-8,  10);
-      ctx.moveTo( 2, -10);
-      ctx.lineTo(12,  0);
-      ctx.lineTo( 2,  10);
+      const keysCount = this.kind === 'boost' ? 2 : 3;
+      for (let i = 0; i < keysCount; i++) {
+        const x0 = -10 + i * 10;
+        ctx.moveTo(x0,     -10);
+        ctx.lineTo(x0 + 10,  0);
+        ctx.lineTo(x0,      10);
+      }
     }
     ctx.stroke();
     ctx.restore();
@@ -654,6 +666,9 @@ function update(dt) {
       if (pu.kind === 'shield') {
         ship.shield = SHIELD_DURATION;
         explode(pu.x, pu.y, 8, '0, 200, 255');
+      } else if (pu.kind === 'triple') {
+        ship.tripleTimer = TRIPLE_DURATION;
+        explode(pu.x, pu.y, 6);
       } else {
         ship.boostTimer = BOOST_DURATION;
         explode(pu.x, pu.y, 6);
@@ -671,8 +686,12 @@ function update(dt) {
         a.dead = true;
         score += POINTS[a.size];
         explode(a.x, a.y, a.size * 5);
-        if (powerups.length < 1 && Math.random() < 0.12)
-          powerups.push(new PowerUp(a.x, a.y, Math.random() < 0.5 ? 'shield' : 'boost'));
+        if (Math.random() < 0.12) {
+          const kinds = ['boost', 'triple', 'shield'];
+          const kind  = kinds[Math.floor(Math.random() * kinds.length)];
+          if (!powerups.some(pu => pu.kind === kind))
+            powerups.push(new PowerUp(a.x, a.y, kind));
+        }
         newAsteroids.push(...a.split());
       }
     }
@@ -745,6 +764,12 @@ if (ship.shield > 0) {
     ctx.fillStyle = '#00c8ff';
     ctx.font      = '13px monospace';
     ctx.fillText(`ESCUDO (${ship.shield.toFixed(1)})`, W / 2, H - 34);
+  }
+
+  if (ship.tripleTimer > 0) {
+    ctx.fillStyle = '#00c8ff';
+    ctx.font      = '13px monospace';
+    ctx.fillText(`TRIPLE SHOT (${ship.tripleTimer.toFixed(1)})`, W / 2, H - 52);
   }
 
   ctx.textAlign = 'left';
