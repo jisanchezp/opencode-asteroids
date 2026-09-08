@@ -45,4 +45,5 @@ Luego visita `http://localhost:3000`.
 - Asteroides se parten en fragmentos más pequeños al ser destruidos
 - Partículas de explosión al destruir asteroides
 - Power-up de velocidad x2 (chevron naranja) que aparece al destruir asteroides; al recogerlo la nave vuela al doble de velocidad por 5 segundos
+- Power-up de escudo (glifo azul) que aparece al destruir asteroides; al recogerlo un anillo protege a la nave durante 8 segundos: los asteroides rebotan y cada impacto consume parte de la energía del escudo
 - Estrella fugaz (naranja, de 5 puntas y con estela): se mueve ~6x más rápido que los asteroides, aparece en el 15% de los spawns de nivel, no se divide, y desaparece sola a los ~8 segundos
