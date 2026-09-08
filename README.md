@@ -32,11 +32,12 @@ Luego visita `http://localhost:3000`.
 
 ## Puntuación
 
-| Asteroide | Puntos |
-| --------- | ------ |
-| Grande    | 20     |
-| Mediano   | 50     |
-| Pequeño   | 100    |
+| Asteroide     | Puntos |
+| ------------- | ------ |
+| Grande        | 20     |
+| Mediano       | 50     |
+| Pequeño       | 100    |
+| Estrella fugaz| 100    |
 
 ## Características
 
@@ -44,3 +45,4 @@ Luego visita `http://localhost:3000`.
 - Asteroides se parten en fragmentos más pequeños al ser destruidos
 - Partículas de explosión al destruir asteroides
 - Power-up de velocidad x2 (chevron naranja) que aparece al destruir asteroides; al recogerlo la nave vuela al doble de velocidad por 5 segundos
+- Estrella fugaz (naranja, de 5 puntas y con estela): se mueve ~6x más rápido que los asteroides, aparece en el 15% de los spawns de nivel, no se divide, y desaparece sola a los ~8 segundos
