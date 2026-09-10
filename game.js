@@ -340,6 +340,23 @@ const SKINS = [
       ctx.fill();
     },
   },
+  {
+    id: 'big-purple', name: 'MORADO',
+    flameColor: 'rgba(180, 80, 255, 0.9)',
+    scale: 2,
+    draw(ctx) {
+      ctx.strokeStyle = '#b050ff';
+      ctx.lineWidth   = 1.5;
+      ctx.lineJoin    = 'round';
+      ctx.beginPath();
+      ctx.moveTo( 20,  0);
+      ctx.lineTo(-12, -9);
+      ctx.lineTo( -7,  0);
+      ctx.lineTo(-12,  9);
+      ctx.closePath();
+      ctx.stroke();
+    },
+  },
 ];
 
 function getSkin() {
@@ -380,7 +397,7 @@ class Ship {
     this.angle  = -Math.PI / 2;
     this.vx     = 0;
     this.vy     = 0;
-    this.radius = 12;
+    this.radius = 12 * (getSkin().scale || 1);
     this.thrusting     = false;
     this.invincible    = 3;
     this.shootCooldown = 0;
@@ -422,7 +439,7 @@ if (this.boostTimer  > 0) this.boostTimer  -= dt;
   tryShoot() {
     if (this.shootCooldown > 0 || this.dead) return [];
     this.shootCooldown = 0.2;
-    const NOSE = 21;
+    const NOSE = 21 * (getSkin().scale || 1);
     const ox = this.x + Math.cos(this.angle) * NOSE;
     const oy = this.y + Math.sin(this.angle) * NOSE;
     const shots = [new Bullet(ox, oy, this.angle)];
@@ -441,6 +458,8 @@ if (this.boostTimer  > 0) this.boostTimer  -= dt;
     ctx.save();
     ctx.translate(this.x, this.y);
     ctx.rotate(this.angle);
+    const skinScale = getSkin().scale || 1;
+    ctx.scale(skinScale, skinScale);
     ctx.lineJoin = 'round';
 
     getSkin().draw(ctx);
@@ -464,7 +483,7 @@ if (this.boostTimer  > 0) this.boostTimer  -= dt;
         ctx.strokeStyle = `rgba(0, 200, 255, ${(0.35 + energy * 0.65).toFixed(2)})`;
         ctx.lineWidth   = 2;
         ctx.beginPath();
-        ctx.arc(this.x, this.y, this.radius + 10, 0, Math.PI * 2);
+        ctx.arc(this.x, this.y, this.radius + 10 * (getSkin().scale || 1), 0, Math.PI * 2);
         ctx.stroke();
         ctx.fillStyle = 'rgba(0, 200, 255, 0.06)';
         ctx.fill();
@@ -684,7 +703,7 @@ function update(dt) {
       if (!a.dead && !b.dead && dist(b, a) < a.radius) {
         b.dead = true;
         a.dead = true;
-        score += POINTS[a.size];
+        score += POINTS[a.size] * (getSkin().scale || 1);
         explode(a.x, a.y, a.size * 5);
         if (Math.random() < 0.12) {
           const kinds = ['boost', 'triple', 'shield'];
