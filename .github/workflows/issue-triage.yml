@@ -1,0 +1,98 @@
+name: issue-triage
+
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  triage:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Apply keyword-based labels
+        env:
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+          ISSUE_BODY: ${{ github.event.issue.body }}
+        run: |
+          TITLE="${ISSUE_TITLE}"
+          BODY="${ISSUE_BODY}"
+          BODY_LOWER="${BODY,,}"
+          LABELS=""
+
+          # --- bug keywords ---
+          if echo "$TITLE $BODY_LOWER" | grep -qiE '(error|crash|bug|broken|not working|fix|fail)'; then
+            LABELS="$LABELS bug"
+          fi
+
+          # --- enhancement keywords ---
+          if echo "$TITLE $BODY_LOWER" | grep -qiE '(feature|add|enhance|improve|new|request|want)'; then
+            LABELS="$LABELS enhancement"
+          fi
+
+          # --- question keywords ---
+          if echo "$TITLE $BODY_LOWER" | grep -qiE '(how|why|what|question|can i|help)'; then
+            LABELS="$LABELS question"
+          fi
+
+          # --- documentation keywords ---
+          if echo "$TITLE $BODY_LOWER" | grep -qiE '(docs|readme|documentation|typo)'; then
+            LABELS="$LABELS documentation"
+          fi
+
+          # Trim leading space
+          LABELS=$(echo "$LABELS" | sed 's/^ //')
+
+          # Apply labels if any matched
+          if [ -n "$LABELS" ]; then
+            echo "Labels to apply: $LABELS"
+            gh issue edit "$ISSUE_NUMBER" --add-label "$LABELS"
+          else
+            echo "No matching labels; skipping label assignment."
+          fi
+
+      - name: Expand description with OpenCode (try) / GitHub Models (fallback)
+        env:
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          ISSUE_BODY: ${{ github.event.issue.body }}
+        run: |
+          BODY="$ISSUE_BODY"
+
+          # Try OpenCode first
+          PROMPT="You are a GitHub issue triage assistant. Expand the following issue description by adding structured sections in English. Keep the original author's text verbatim at the top under '## Original Description'. Then add concise sections below: '## Steps to Reproduce', '## Expected Behavior', '## Environment' (if inferable). Do NOT remove or rephrase the original text. If information for a section isn't available, write 'Not provided.'"
+
+          # Write prompt + body to a temp file to avoid shell escaping issues
+          printf 'PROMPT_RAW=\'%s\'\nORIG_BODY=\'%s\'\n' "$PROMPT" "$BODY" > /tmp/opencode_prompt.sh
+          BASH_PROMPT=$(cat /tmp/opencode_prompt.sh | envsubst '$PROMPT_RAW $ORIG_BODY' || true)
+
+          if opencode github run --prompt "$PROMPT" 2>/dev/null; then
+            echo "OpenCode succeeded"
+          else
+            echo "OpenCode failed, falling back to GitHub Models API"
+            # Fallback: GitHub Models API with gpt-4o-mini
+            MODEL_RESPONSE=$(curl -s https://models.inference.ai.azure.com/v1/chat/completions \
+              -H "Authorization: Bearer $GITHUB_TOKEN" \
+              -H "Content-Type: application/json" \
+              -d "{
+                \"model\": \"gpt-4o-mini\",
+                \"messages\": [
+                  {\"role\": \"system\", \"content\": \"You are a GitHub issue triage assistant. Expand the issue description by adding structured sections in English. Keep the original author's text verbatim at the top under '## Original Description'. Then add: '## Steps to Reproduce', '## Expected Behavior', '## Environment'. Do NOT remove or rephrase the original text. If info missing, write 'Not provided.'}
+                  ,
+                  {\"role\": \"user\", \"content\": \"ORIGINAL: $BODY\"}
+                ],
+                \"temperature\": 0.3
+              }")
+            EXPANDED=$(echo "$MODEL_RESPONSE" | jq -r '.choices[1].message.content')
+            echo "Expanded body:"
+            echo "$EXPANDED"
+            gh issue edit "$ISSUE_NUMBER" --body "$EXPANDED"
+          fi
+
+      - name: Assign issue to myself
+        run: gh issue edit "$ISSUE_NUMBER" --add-assignee jisanchezp
