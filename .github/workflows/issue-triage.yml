@@ -17,82 +17,83 @@ jobs:
           persist-credentials: false
 
       - name: Apply keyword-based labels
+        id: labels
         env:
           ISSUE_TITLE: ${{ github.event.issue.title }}
           ISSUE_BODY: ${{ github.event.issue.body }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
         run: |
-          TITLE="${ISSUE_TITLE}"
-          BODY="${ISSUE_BODY}"
-          BODY_LOWER="${BODY,,}"
+          TEXT=$(printf '%s\n%s' "$ISSUE_TITLE" "$ISSUE_BODY" | tr '[:upper:]' '[:lower:]')
           LABELS=""
 
-          # --- bug keywords ---
-          if echo "$TITLE $BODY_LOWER" | grep -qiE '(error|crash|bug|broken|not working|fix|fail)'; then
+          if echo "$TEXT" | grep -qiE '(error|bug|crash|broken|not working|fix|fail|falla)'; then
             LABELS="$LABELS bug"
           fi
 
-          # --- enhancement keywords ---
-          if echo "$TITLE $BODY_LOWER" | grep -qiE '(feature|add|enhance|improve|new|request|want)'; then
+          if echo "$TEXT" | grep -qiE '(feature|add|enhance|improve|new|request|want|mejora)'; then
             LABELS="$LABELS enhancement"
           fi
 
-          # --- question keywords ---
-          if echo "$TITLE $BODY_LOWER" | grep -qiE '(how|why|what|question|can i|help)'; then
+          if echo "$TEXT" | grep -qiE '(how|why|what|question|can i|help|como|ayuda)'; then
             LABELS="$LABELS question"
           fi
 
-          # --- documentation keywords ---
-          if echo "$TITLE $BODY_LOWER" | grep -qiE '(docs|readme|documentation|typo)'; then
+          if echo "$TEXT" | grep -qiE '(docs|readme|documentation|typo)'; then
             LABELS="$LABELS documentation"
           fi
 
-          # Trim leading space
           LABELS=$(echo "$LABELS" | sed 's/^ //')
 
-          # Apply labels if any matched
           if [ -n "$LABELS" ]; then
-            echo "Labels to apply: $LABELS"
+            echo "labels=$LABELS" >> "$GITHUB_OUTPUT"
             gh issue edit "$ISSUE_NUMBER" --add-label "$LABELS"
           else
+            echo "labels=none" >> "$GITHUB_OUTPUT"
             echo "No matching labels; skipping label assignment."
           fi
 
-      - name: Expand description with OpenCode (try) / GitHub Models (fallback)
+      - name: Format issue body preserving original text
+        env:
+          ISSUE_BODY: ${{ github.event.issue.body }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          LABELS: ${{ steps.labels.outputs.labels }}
+        run: |
+          SECTION=$(cat <<TRIAGE
+          ## Triage
+
+          **Labels applied:** ${LABELS:-none}
+
+          **Category:** ${LABELS:-Not classified by keywords.}
+
+          ### For reviewers
+          - **Affected files:** game.js / index.html / README.md (not provided)
+          - **Steps to reproduce:** Not provided.
+          - **Expected behavior:** Not provided.
+          - **Environment:** Not provided.
+
+          ---
+          *This section was added automatically by the issue-triage workflow. The original description above is preserved verbatim.*
+          TRIAGE
+          )
+          printf '%s\n\n---\n\n%s\n' "$ISSUE_BODY" "$SECTION" > /tmp/issue-formatted.md
+          gh issue edit "$ISSUE_NUMBER" --body-file /tmp/issue-formatted.md
+
+      - name: Post triage comment
         env:
           ISSUE_NUMBER: ${{ github.event.issue.number }}
-          ISSUE_BODY: ${{ github.event.issue.body }}
+          LABELS: ${{ steps.labels.outputs.labels }}
+          ISSUE_TITLE: ${{ github.event.issue.title }}
         run: |
-          BODY="$ISSUE_BODY"
+          gh issue comment "$ISSUE_NUMBER" --body-file - <<EOF
+          **Triage summary**
 
-          # Try OpenCode first
-          PROMPT="You are a GitHub issue triage assistant. Expand the following issue description by adding structured sections in English. Keep the original author's text verbatim at the top under '## Original Description'. Then add concise sections below: '## Steps to Reproduce', '## Expected Behavior', '## Environment' (if inferable). Do NOT remove or rephrase the original text. If information for a section isn't available, write 'Not provided.'"
+          **Issue:** $ISSUE_TITLE
+          **Labels applied:** ${LABELS:-none}
 
-          # Write prompt + body to a temp file to avoid shell escaping issues
-          printf 'PROMPT_RAW=\'%s\'\nORIG_BODY=\'%s\'\n' "$PROMPT" "$BODY" > /tmp/opencode_prompt.sh
-          BASH_PROMPT=$(cat /tmp/opencode_prompt.sh | envsubst '$PROMPT_RAW $ORIG_BODY' || true)
+          For the full triage details including reviewer checklist, see the formatted issue body.
+          EOF
 
-          if opencode github run --prompt "$PROMPT" 2>/dev/null; then
-            echo "OpenCode succeeded"
-          else
-            echo "OpenCode failed, falling back to GitHub Models API"
-            # Fallback: GitHub Models API with gpt-4o-mini
-            MODEL_RESPONSE=$(curl -s https://models.inference.ai.azure.com/v1/chat/completions \
-              -H "Authorization: Bearer $GITHUB_TOKEN" \
-              -H "Content-Type: application/json" \
-              -d "{
-                \"model\": \"gpt-4o-mini\",
-                \"messages\": [
-                  {\"role\": \"system\", \"content\": \"You are a GitHub issue triage assistant. Expand the issue description by adding structured sections in English. Keep the original author's text verbatim at the top under '## Original Description'. Then add: '## Steps to Reproduce', '## Expected Behavior', '## Environment'. Do NOT remove or rephrase the original text. If info missing, write 'Not provided.'}
-                  ,
-                  {\"role\": \"user\", \"content\": \"ORIGINAL: $BODY\"}
-                ],
-                \"temperature\": 0.3
-              }")
-            EXPANDED=$(echo "$MODEL_RESPONSE" | jq -r '.choices[1].message.content')
-            echo "Expanded body:"
-            echo "$EXPANDED"
-            gh issue edit "$ISSUE_NUMBER" --body "$EXPANDED"
-          fi
-
-      - name: Assign issue to myself
+      - name: Assign issue
+        env:
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
         run: gh issue edit "$ISSUE_NUMBER" --add-assignee jisanchezp
